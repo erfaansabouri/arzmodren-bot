@@ -4,7 +4,7 @@ include 'Telegram.php';
 
 
 /* TELEGRAM VARIABLES */
-$API_KEY = '708339626:AAEuT9rjD97XYvWFm5jMbgtq7Niy2XyPljc';
+$API_KEY = '';
 $telegram = new Telegram($API_KEY);
 $result = $telegram->getData();
 $text = $result['message']['text'];
@@ -22,9 +22,9 @@ $username = $result['message']['chat']['username'];
 /* DATABASE CONNECTION */
 
 $servernameDB = "localhost";
-$usernameDB = "biaradio_doge";
-$passwordDB = "mydoge";
-$dbnameDB = "biaradio_doge";
+$usernameDB = "";
+$passwordDB = "";
+$dbnameDB = "";
 $connection = new mysqli($servernameDB, $usernameDB, $passwordDB, $dbnameDB);
 
 /* DATABASE CONNECTION END */
