@@ -40,9 +40,9 @@ $main_menu_options = array(
     //First row
     array($telegram->buildKeyboardButton("💳 حساب کاربری من")), 
     //Second row 
-    array($telegram->buildKeyboardButton("💵 درخواست برداشت"), $telegram->buildKeyboardButton("🖇 لینک دعوت از دوستان"), $telegram->buildKeyboardButton("🎁 گردونه شانس")), 
+    array($telegram->buildKeyboardButton("🖇 لینک دعوت از دوستان"), $telegram->buildKeyboardButton("🎁 گردونه شانس")), 
     //Third row
-    array($telegram->buildKeyboardButton("✅ تایید شماره تلفن همراه" , true))
+    array($telegram->buildKeyboardButton("💵 درخواست برداشت"))
     );
     
 $main_menu_keyboard = $telegram->buildKeyBoard($main_menu_options, $onetime=false , true);
@@ -304,7 +304,11 @@ function getWaitTime($chat_id){
     $select_row = $select_query->fetch_assoc();
     $lastTry = $select_row["last_wheel_try"];
     $now = time();
-    return $diff = floor((86400 - ($now - $lastTry))/3600);
+    $seconds = floor((86400 - ($now - $lastTry)));
+    $hours = floor($seconds / 3600);
+    $minutes = floor(($seconds / 60) % 60);
+    $seconds = $seconds % 60;
+    return $hours > 0 ? "$hours ساعت, $minutes دقیقه باقی مانده است" : ($minutes > 0 ? "$minutes دقیقه, $seconds ثانیه باقی مانده است" : "$seconds ثانیه یاقی مانده است");
 }
 
 function userHasEnoughBalance($chat_id){
@@ -404,19 +408,7 @@ function mergeUserImage($raw_photo_path){
 /* FUNCTIONS END */
 /* <---------------------------------------------------------> */
 
-if (userHasPhone($chat_id)){
-    global $main_menu_options;
-    $main_menu_options = array( 
-    //First row
-    array($telegram->buildKeyboardButton("💳 حساب کاربری من")), 
-    //Second row 
-    array( $telegram->buildKeyboardButton("🖇 لینک دعوت از دوستان"), $telegram->buildKeyboardButton("🎁 گردونه شانس")), 
-    //Third row
-    array($telegram->buildKeyboardButton("💵 درخواست برداشت")), );
-    global $main_menu_keyboard;
-    $main_menu_keyboard = $telegram->buildKeyBoard($main_menu_options, $onetime=false , true);
 
-}
 
 
 
@@ -558,7 +550,7 @@ elseif(isJoined($chat_id)){
             }
             
             elseif(!hasValidWheel($chat_id)){
-                BotSendMessage($chat_id , 'شما میتوانید  '.getWaitTime($chat_id).' ساعت دیگر گردنه را بچرخانید.' , 'html' , null , $main_menu_keyboard);
+                BotSendMessage($chat_id , getWaitTime($chat_id) . " تا چرخش بعدی." , 'html' , null , $main_menu_keyboard);
             }
            
         }
