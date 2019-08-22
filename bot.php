@@ -2,9 +2,12 @@
 
 include 'Telegram.php';
 
+require 'vendor/autoload.php';
+
+use Gregwar\Image\Image;
 
 /* TELEGRAM VARIABLES */
-$API_KEY = '';
+$API_KEY = '708339626:AAEuT9rjD97XYvWFm5jMbgtq7Niy2XyPljc';
 $telegram = new Telegram($API_KEY);
 $result = $telegram->getData();
 $text = $result['message']['text'];
@@ -22,9 +25,9 @@ $username = $result['message']['chat']['username'];
 /* DATABASE CONNECTION */
 
 $servernameDB = "localhost";
-$usernameDB = "";
-$passwordDB = "";
-$dbnameDB = "";
+$usernameDB = "biaradio_doge";
+$passwordDB = "mydoge";
+$dbnameDB = "biaradio_doge";
 $connection = new mysqli($servernameDB, $usernameDB, $passwordDB, $dbnameDB);
 
 /* DATABASE CONNECTION END */
@@ -160,7 +163,7 @@ function isJoined($chat_id){
 
 function validateContact($contact){
     global $chat_id;
-    return $contact['user_id'] == $chat_id;
+    return $contact['user_id'] == $chat_id && (substr($contact['phone_number'], 0,2)== '98' || substr($contact['phone_number'], 0,3)== '+98');
 }
 
 function userHasPhone($chat_id){
@@ -349,6 +352,55 @@ function getLastWithDraw($chat_id){
     $select_row = $select_query->fetch_assoc();
     return $select_row["last_withdraw"];
 }
+
+function writeNameOnImage($base_image , $chat_id){
+    global $first_name;
+    Image::open($base_image)
+            ->write('CaviarDreams.ttf', $first_name, 1105, 465, 25, 0, 'white', 'center')
+            ->save("images/withName$chat_id.jpg", 'jpg');
+}
+
+function saveUserImage($photo){
+    global $chat_id;
+    global $telegram;
+    $file = $telegram->getFile($photo);
+    $telegram->downloadFile($file['result']['file_path'], "images/raw$chat_id.png");
+    
+}
+
+function mergeUserImage($raw_photo_path){
+    global $first_name;
+    global $chat_id;
+    Image::open($raw_photo_path)->resize(470, 470)->save($raw_photo_path);
+        $w = 470;  $h=470; // original size
+        $original_path=$raw_photo_path;
+        $dest_path="images/circule$chat_id.png";
+        $src = imagecreatefromstring(file_get_contents($original_path));
+        $newpic = imagecreatetruecolor($w,$h);
+        imagealphablending($newpic,false);
+        $transparent = imagecolorallocatealpha($newpic, 0, 0, 0, 127);
+        $r=$w/2;
+        for($x=0;$x<$w;$x++)
+            for($y=0;$y<$h;$y++){
+                $c = imagecolorat($src,$x,$y);
+                $_x = $x - $w/2;
+                $_y = $y - $h/2;
+                if((($_x*$_x) + ($_y*$_y)) < ($r*$r)){
+                    imagesetpixel($newpic,$x,$y,$c);
+                }else{
+                    imagesetpixel($newpic,$x,$y,$transparent);
+                }
+            }
+        imagesavealpha($newpic, true);
+        imagepng($newpic, $dest_path);
+        imagedestroy($newpic);
+        imagedestroy($src);
+        Image::open('images/tron.jpg')
+        ->merge(Image::open("images/circule$chat_id.png"), $x=384, $y=408, $width=470, $height=470)
+        ->write('CaviarDreams.ttf', $first_name, 1105, 465, 25, 0, 'white', 'center')
+        ->save("images/withNameImage$chat_id.jpg", 'jpg');
+
+}
 /* FUNCTIONS END */
 /* <---------------------------------------------------------> */
 
@@ -424,6 +476,11 @@ if(!userHasPhone($chat_id)){
         // update the phone number
         updateUserPhone($chat_id , $contact["phone_number"]);
         BotSendMessage($chat_id , "شماره همراه شما با موفقیت ثبت شد.\nلطفا در کانال زیر عضو شوید.".PHP_EOL."@ThisDoge" , null , null , $iAmJoinedButtonKeyboard);
+    }
+    
+    elseif($telegram->getUpdateType() == 'contact' && !validateContact($contact)){
+        $replyText = "شماره نا معتبر است! تنها شماره ایران پذیرفته میشود.".substr($contact['phone_number'], 0,3);
+        BotSendMessage($chat_id , $replyText , null , null , $validPhoneKeyboard);
     }
     else{
         $replyText = "برای جلوگیری از تقلب و ایجاد فضای رقابتی سالم لازم است ابتدا شماره تلفن همراه خود را با استفاده از دکمه کیبورد زیر ارسال کنید.";
@@ -507,10 +564,17 @@ elseif(isJoined($chat_id)){
         }
         
         elseif($text == "🖇 لینک دعوت از دوستان"){
-            $userPhoto = $telegram->getUserProfilePhotos(['user_id' => $chat_id])["result"]["photos"][0][0]["file_id"];
+            $userPhoto = $telegram->getUserProfilePhotos(['user_id' => $chat_id])["result"]["photos"][0][2]["file_id"];
             
             if(is_null($userPhoto)){
-                $userPhoto = curl_file_create('images/tron.jpg','image/jpg'); 
+                writeNameOnImage("images/tron.jpg",$chat_id);
+                $userPhoto = curl_file_create("images/withName$chat_id.jpg",'image/jpg'); 
+            }
+            
+            elseif(!is_null($userPhoto)){
+                saveUserImage($userPhoto);
+                mergeUserImage("images/raw$chat_id.png");
+                $userPhoto = curl_file_create("images/withNameImage$chat_id.jpg",'image/jpg'); 
             }
             $telegram->sendPhoto([
                     'chat_id' => $chat_id,
